@@ -10,3 +10,10 @@ wheels/
 .venv
 
 .DS_Store
+
+# Sandbox artifacts
+sandbox/*
+
+.cursor/
+models/
+.env

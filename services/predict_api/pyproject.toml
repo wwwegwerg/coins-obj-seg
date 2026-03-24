@@ -1,0 +1,15 @@
+[project]
+name = "predict-api"
+version = "0.1.0"
+description = "Predict orchestration service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "httpx",
+    "pillow",
+    "pydantic",
+    "python-dotenv",
+    "python-multipart",
+    "uvicorn[standard]",
+]
+

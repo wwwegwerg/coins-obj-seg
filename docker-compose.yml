@@ -1,0 +1,61 @@
+services:
+  florence-api:
+    build:
+      context: ./services/florence_api
+      dockerfile: Dockerfile
+    container_name: florence-api
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./models:/app/models
+    env_file:
+      - ./services/florence_api/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  sam-api:
+    build:
+      context: ./services/sam_api
+      dockerfile: Dockerfile
+    container_name: sam-api
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./models:/app/models
+    env_file:
+      - ./services/sam_api/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  predict-api:
+    build:
+      context: ./services/predict_api
+      dockerfile: Dockerfile
+    container_name: predict-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./services/predict_api/.env
+    environment:
+      FLORENCE_API_URL: ${FLORENCE_API_URL:-http://florence-api:8000}
+      SAM_API_URL: ${SAM_API_URL:-http://sam-api:8000}
+    depends_on:
+      florence-api:
+        condition: service_healthy
+      sam-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+

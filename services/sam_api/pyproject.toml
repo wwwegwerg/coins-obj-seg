@@ -1,0 +1,20 @@
+[project]
+name = "sam-api"
+version = "0.1.0"
+description = "SAM segmentation service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "pillow",
+    "pydantic",
+    "python-dotenv",
+    "python-multipart",
+    "uvicorn[standard]",
+    "einops",
+    "huggingface-hub",
+    "numpy",
+    "timm",
+    "torch",
+    "transformers<5",
+]
+

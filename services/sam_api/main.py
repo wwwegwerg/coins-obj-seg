@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 
 from contracts import SegmentMetadata, SegmentMetadataItem
 from models import load_resources
-from service import build_cutout_png_bytes, segment_with_sam
+from service import segment_with_sam
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -29,9 +29,11 @@ def _preload_enabled() -> bool:
 async def preload_models() -> None:
     if not _preload_enabled():
         logger.info("PRELOAD_MODELS is disabled; readiness will stay false until first request.")
+        logger.info("SAM startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
         return
     load_resources()
     app.state.ready = True
+    logger.info("SAM startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
 
 
 @app.get("/health")
@@ -99,9 +101,13 @@ async def segment(
     metadata_items: list[SegmentMetadataItem] = []
     with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         for idx, segmentation in enumerate(segmentations):
-            png_bytes, mask_area = build_cutout_png_bytes(image, segmentation.mask)
-            if not png_bytes:
+            if segmentation.mask.ndim != 2:
                 continue
+
+            mask_image = Image.fromarray((segmentation.mask > 0).astype("uint8") * 255, mode="L")
+            png_buffer = io.BytesIO()
+            mask_image.save(png_buffer, format="PNG")
+            png_bytes = png_buffer.getvalue()
             mask_filename = f"mask_{idx:03d}.png"
             zf.writestr(mask_filename, png_bytes)
             metadata_items.append(
@@ -109,7 +115,6 @@ async def segment(
                     detection_index=idx,
                     mask_filename=mask_filename,
                     mask_score=segmentation.mask_score,
-                    mask_area=mask_area,
                 )
             )
 

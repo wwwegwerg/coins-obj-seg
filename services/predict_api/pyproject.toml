@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "httpx",
+    "numpy>=2.4.3",
     "pillow",
     "pydantic",
     "python-dotenv",

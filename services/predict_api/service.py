@@ -3,8 +3,10 @@ import io
 import json
 import logging
 import zipfile
+from typing import Iterable
 
 import httpx
+import numpy as np
 from PIL import Image
 
 from contracts import (
@@ -83,29 +85,53 @@ async def call_sam(
         return mask_files, metadata
 
 
-def _mask_bbox_iou(mask_png_bytes: bytes, bbox: list[float]) -> float | None:
+def _load_binary_mask(mask_png_bytes: bytes) -> np.ndarray | None:
     try:
-        image = Image.open(io.BytesIO(mask_png_bytes)).convert("RGBA")
+        image = Image.open(io.BytesIO(mask_png_bytes)).convert("L")
     except Exception:
         return None
+    return (np.array(image, dtype=np.uint8) > 0).astype(np.uint8)
 
-    alpha = image.getchannel("A")
-    alpha_data = alpha.getdata()
-    width, height = image.size
 
-    xs: list[int] = []
-    ys: list[int] = []
-    for idx, value in enumerate(alpha_data):
-        if value > 0:
-            x = idx % width
-            y = idx // width
-            xs.append(x)
-            ys.append(y)
+def _clamp_bbox(bbox: Iterable[float], width: int, height: int) -> list[float]:
+    x1, y1, x2, y2 = [float(v) for v in bbox]
+    x1 = max(0.0, min(float(width - 1), x1))
+    y1 = max(0.0, min(float(height - 1), y1))
+    x2 = max(x1 + 1.0, min(float(width), x2))
+    y2 = max(y1 + 1.0, min(float(height), y2))
+    return [x1, y1, x2, y2]
 
-    if not xs or not ys:
+
+def _build_cutout_png_bytes(image: Image.Image, mask: np.ndarray) -> bytes | None:
+    if mask.ndim != 2:
+        return None
+
+    ys, xs = np.where(mask > 0)
+    if xs.size == 0 or ys.size == 0:
+        return None
+
+    x_min, x_max = int(xs.min()), int(xs.max())
+    y_min, y_max = int(ys.min()), int(ys.max())
+
+    rgba = image.convert("RGBA")
+    rgba_array = np.array(rgba, dtype=np.uint8)
+    rgba_array[:, :, 3] = (mask * 255).astype(np.uint8)
+
+    cutout = Image.fromarray(rgba_array, mode="RGBA").crop((x_min, y_min, x_max + 1, y_max + 1))
+    buf = io.BytesIO()
+    cutout.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _mask_bbox_iou(mask: np.ndarray, bbox: list[float]) -> float | None:
+    if mask.ndim != 2:
+        return None
+
+    ys, xs = np.where(mask > 0)
+    if xs.size == 0 or ys.size == 0:
         return 0.0
 
-    mx1, my1, mx2, my2 = min(xs), min(ys), max(xs), max(ys)
+    mx1, my1, mx2, my2 = int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
     bx1, by1, bx2, by2 = bbox
 
     inter_x1 = max(float(mx1), float(bx1))
@@ -130,6 +156,11 @@ async def run_predict(
     filename: str,
     content_type: str,
 ) -> PredictResponse:
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception as exc:
+        raise RuntimeError(f"Failed to decode image in predict service: {exc}") from exc
+
     detections = await call_florence(
         file_bytes=file_bytes,
         filename=filename,
@@ -151,17 +182,22 @@ async def run_predict(
         if item.detection_index >= len(detections):
             continue
         detection = detections[item.detection_index]
+        clamped_bbox = _clamp_bbox(detection.bbox, image.width, image.height)
         mask_bytes = mask_files.get(item.mask_filename)
         if not mask_bytes:
             continue
+        mask = _load_binary_mask(mask_bytes)
+        if mask is None:
+            continue
+        cutout_png_bytes = _build_cutout_png_bytes(image, mask)
+        encoded_png_bytes = cutout_png_bytes or mask_bytes
         instances.append(
             InstancePrediction(
                 label=detection.label,
                 mask_score=item.mask_score,
-                bbox=detection.bbox,
-                mask_area=item.mask_area,
-                bbox_mask_iou=_mask_bbox_iou(mask_bytes, detection.bbox),
-                png_base64=base64.b64encode(mask_bytes).decode("ascii"),
+                bbox=clamped_bbox,
+                bbox_mask_iou=_mask_bbox_iou(mask, clamped_bbox),
+                png_base64=base64.b64encode(encoded_png_bytes).decode("ascii"),
             )
         )
 

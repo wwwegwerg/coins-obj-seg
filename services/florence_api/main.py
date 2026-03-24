@@ -27,9 +27,11 @@ def _preload_enabled() -> bool:
 async def preload_models() -> None:
     if not _preload_enabled():
         logger.info("PRELOAD_MODELS is disabled; readiness will stay false until first request.")
+        logger.info("Florence startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
         return
     load_resources()
     app.state.ready = True
+    logger.info("Florence startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
 
 
 @app.get("/health")

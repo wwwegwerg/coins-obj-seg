@@ -1,6 +1,6 @@
 # predict_api
 
-Оркестратор пайплайна: вызывает `florence_api` для детекции, затем `sam_api` для сегментации и возвращает агрегированный результат.
+Оркестратор и центр постобработки пайплайна: вызывает `florence_api` (детекция) и `sam_api` (raw маски), а затем выполняет всю вторичную обработку и формирует финальный ответ.
 
 ## Endpoints
 
@@ -10,8 +10,14 @@
   - Request: `multipart/form-data`, поле `file` (изображение).
   - Response:
     - `objects`: уникальные label.
-    - `instances`: список объектов с bbox, площадью маски, `bbox_mask_iou` и `png_base64`.
+    - `instances`: список объектов с bbox, `bbox_mask_iou` и `png_base64`.
   - Ошибки: `400` (невалидный файл), `500` (ошибка оркестрации/вызова downstream).
+
+В `predict_api` выполняются:
+- нормализация bbox;
+- вырезка объекта по маске (PNG с прозрачным фоном);
+- вычисление `bbox_mask_iou`;
+- сборка финального ответа.
 
 ## Environment
 
@@ -61,7 +67,6 @@ curl -X POST "http://localhost:8000/predict" \
       "label": "coin",
       "mask_score": 0.93,
       "bbox": [123.4, 56.7, 220.1, 160.9],
-      "mask_area": 15234,
       "bbox_mask_iou": 0.88,
       "png_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
     }

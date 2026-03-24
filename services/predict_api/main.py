@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Predict Orchestrator API")
 
 
+@app.on_event("startup")
+async def on_startup() -> None:
+    logger.info("Predict startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}

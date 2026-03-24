@@ -1,6 +1,5 @@
-import io
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import torch
@@ -48,8 +47,7 @@ def segment_with_sam(
     if not bboxes:
         return []
 
-    normalized_bboxes = [clamp_bbox(bbox, image.width, image.height) for bbox in bboxes]
-    input_boxes = [normalized_bboxes]
+    input_boxes = [bboxes]
     sam_inputs = resources.processor(
         images=image,
         input_boxes=input_boxes,
@@ -92,40 +90,3 @@ def segment_with_sam(
             )
         )
     return segmentations
-
-
-def build_cutout_png_bytes(image: Image.Image, mask: np.ndarray) -> tuple[bytes | None, int]:
-    if mask.ndim != 2:
-        return None, 0
-
-    mask_area = int(mask.sum())
-    if mask_area <= 0:
-        return None, 0
-
-    ys, xs = np.where(mask > 0)
-    if xs.size == 0 or ys.size == 0:
-        return None, 0
-
-    x_min, x_max = int(xs.min()), int(xs.max())
-    y_min, y_max = int(ys.min()), int(ys.max())
-
-    rgba = image.convert("RGBA")
-    rgba_array = np.array(rgba, dtype=np.uint8)
-    rgba_array[:, :, 3] = (mask * 255).astype(np.uint8)
-
-    cutout = Image.fromarray(rgba_array, mode="RGBA").crop(
-        (x_min, y_min, x_max + 1, y_max + 1)
-    )
-
-    buf = io.BytesIO()
-    cutout.save(buf, format="PNG")
-    return buf.getvalue(), mask_area
-
-
-def clamp_bbox(bbox: Iterable[float], width: int, height: int) -> list[float]:
-    x1, y1, x2, y2 = [float(v) for v in bbox]
-    x1 = max(0.0, min(float(width - 1), x1))
-    y1 = max(0.0, min(float(height - 1), y1))
-    x2 = max(x1 + 1.0, min(float(width), x2))
-    y2 = max(y1 + 1.0, min(float(height), y2))
-    return [x1, y1, x2, y2]

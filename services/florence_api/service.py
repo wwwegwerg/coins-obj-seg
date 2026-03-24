@@ -1,4 +1,3 @@
-from typing import Iterable
 import torch
 from PIL import Image
 
@@ -49,16 +48,7 @@ def detect_with_florence(
         detections.append(
             Detection(
                 label=label.strip(),
-                bbox=clamp_bbox(bbox, image.width, image.height),
+                bbox=[float(v) for v in bbox],
             )
         )
     return detections
-
-
-def clamp_bbox(bbox: Iterable[float], width: int, height: int) -> list[float]:
-    x1, y1, x2, y2 = [float(v) for v in bbox]
-    x1 = max(0.0, min(float(width - 1), x1))
-    y1 = max(0.0, min(float(height - 1), y1))
-    x2 = max(x1 + 1.0, min(float(width), x2))
-    y2 = max(y1 + 1.0, min(float(height), y2))
-    return [x1, y1, x2, y2]

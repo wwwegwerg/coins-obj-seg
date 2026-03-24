@@ -14,10 +14,38 @@
   - Ошибки: `400` (невалидный файл), `500` (ошибка оркестрации/вызова downstream).
 
 В `predict_api` выполняются:
+
+- постобработка детекций Florence до SAM:
+  - confidence threshold;
+  - box sanity checks;
 - нормализация bbox;
 - вырезка объекта по маске (PNG с прозрачным фоном);
 - вычисление `bbox_mask_iou`;
+- mask-level NMS (дедуп почти одинаковых масок по IoU масок);
 - сборка финального ответа.
+
+Параметры постобработки Florence захардкожены в `service.py`:
+
+- `CONFIDENCE_THRESHOLD = 0.0`
+- `MIN_BOX_WIDTH_PX = 4.0`
+- `MIN_BOX_HEIGHT_PX = 4.0`
+- `MIN_BOX_AREA_RATIO = 0.0001`
+- `MAX_BOX_AREA_RATIO = 0.95`
+- `MIN_BOX_ASPECT_RATIO = 0.2`
+- `MAX_BOX_ASPECT_RATIO = 5.0`
+- `MIN_CUTOUT_WIDTH_PX = 32`
+- `MIN_CUTOUT_HEIGHT_PX = 32`
+- `MIN_MASK_SCORE = 0.7`
+- `MIN_BBOX_MASK_IOU = 0.3`
+- `MASK_NMS_IOU_THRESHOLD = 0.88`
+
+Финальная фильтрация инстансов после SAM выполняется через `AND`:
+
+- `mask_score >= MIN_MASK_SCORE`
+- `bbox_mask_iou >= MIN_BBOX_MASK_IOU`
+
+После этого применяется `mask-level NMS`: если IoU двух бинарных масок >= `MASK_NMS_IOU_THRESHOLD`,
+остается только более приоритетный кандидат.
 
 ## Environment
 

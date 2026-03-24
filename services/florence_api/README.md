@@ -1,6 +1,6 @@
 # florence_api
 
-Тонкий сервис детекции объектов на базе Florence-2. Принимает изображение и возвращает минимальный результат модели: label + bbox.
+Тонкий сервис детекции объектов на базе Florence-2. Принимает изображение и возвращает минимальный результат модели: label + bbox + score.
 
 ## Endpoints
 
@@ -8,7 +8,7 @@
 - `GET /ready` -> `{"status":"ready"}` если модель загружена, иначе `503`.
 - `POST /detect` -> JSON с детекциями:
   - Request: `multipart/form-data`, поле `file` (изображение).
-  - Response: `{"detections":[{"label":"...", "bbox":[x1,y1,x2,y2]}]}`.
+  - Response: `{"detections":[{"label":"...", "bbox":[x1,y1,x2,y2], "score":0.0}]}`.
   - Ошибки: `400` (не изображение / пустой файл / decode), `500` (ошибка инференса).
 
 `florence_api` не выполняет геометрическую нормализацию bbox. Нормализация и дополнительная постобработка выполняются в `predict_api`.
@@ -17,8 +17,8 @@
 
 Пример: `.env.example`
 
-- `FLORENCE_MODEL_ID` (default: `microsoft/Florence-2-base-ft`)
-- `FLORENCE_MODEL_DIR` (default в коде: `models/florence-2-base-ft`, в compose: `/models/florence-2-base-ft`)
+- `FLORENCE_MODEL_ID` (default: `florence-community/Florence-2-base`)
+- `FLORENCE_MODEL_DIR` (default в коде: `models/florence-2-base`, в compose: `/models/florence-2-base`)
 - `PRELOAD_MODELS` (default: `true`) - загружать модель на startup.
 
 ## Run locally
@@ -53,7 +53,8 @@ curl -X POST "http://localhost:8000/detect" \
   "detections": [
     {
       "label": "coin",
-      "bbox": [123.4, 56.7, 220.1, 160.9]
+      "bbox": [123.4, 56.7, 220.1, 160.9],
+      "score": 0.94
     }
   ]
 }

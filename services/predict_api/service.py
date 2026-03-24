@@ -25,6 +25,20 @@ from settings import (
 
 logger = logging.getLogger(__name__)
 
+# Hardcoded detection and instance post-processing parameters.
+CONFIDENCE_THRESHOLD = 0.0
+MIN_BOX_WIDTH_PX = 4.0
+MIN_BOX_HEIGHT_PX = 4.0
+MIN_BOX_AREA_RATIO = 0.001
+MAX_BOX_AREA_RATIO = 0.95
+MIN_BOX_ASPECT_RATIO = 0.2
+MAX_BOX_ASPECT_RATIO = 5.0
+MIN_CUTOUT_WIDTH_PX = 32
+MIN_CUTOUT_HEIGHT_PX = 32
+MIN_MASK_SCORE = 0.7
+MIN_BBOX_MASK_IOU = 0.3
+MASK_NMS_IOU_THRESHOLD = 0.88
+
 
 async def _post_multipart(
     url: str,
@@ -123,15 +137,31 @@ def _build_cutout_png_bytes(image: Image.Image, mask: np.ndarray) -> bytes | Non
     return buf.getvalue()
 
 
-def _mask_bbox_iou(mask: np.ndarray, bbox: list[float]) -> float | None:
+def _mask_bounds(mask: np.ndarray) -> tuple[int, int, int, int] | None:
     if mask.ndim != 2:
         return None
-
     ys, xs = np.where(mask > 0)
     if xs.size == 0 or ys.size == 0:
+        return None
+    return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+
+def _passes_cutout_size(mask: np.ndarray) -> bool:
+    bounds = _mask_bounds(mask)
+    if bounds is None:
+        return False
+    x_min, y_min, x_max, y_max = bounds
+    width = x_max - x_min + 1
+    height = y_max - y_min + 1
+    return width >= MIN_CUTOUT_WIDTH_PX and height >= MIN_CUTOUT_HEIGHT_PX
+
+
+def _mask_bbox_iou(mask: np.ndarray, bbox: list[float]) -> float | None:
+    bounds = _mask_bounds(mask)
+    if bounds is None:
         return 0.0
 
-    mx1, my1, mx2, my2 = int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+    mx1, my1, mx2, my2 = bounds
     bx1, by1, bx2, by2 = bbox
 
     inter_x1 = max(float(mx1), float(bx1))
@@ -149,6 +179,81 @@ def _mask_bbox_iou(mask: np.ndarray, bbox: list[float]) -> float | None:
     if union <= 0.0:
         return 0.0
     return inter_area / union
+
+
+def _passes_box_sanity_checks(bbox: list[float], width: int, height: int) -> bool:
+    x1, y1, x2, y2 = bbox
+    box_w = x2 - x1
+    box_h = y2 - y1
+    if box_w <= 0.0 or box_h <= 0.0:
+        return False
+    if box_w < MIN_BOX_WIDTH_PX or box_h < MIN_BOX_HEIGHT_PX:
+        return False
+
+    image_area = float(width * height)
+    if image_area <= 0.0:
+        return False
+    area_ratio = (box_w * box_h) / image_area
+    if area_ratio < MIN_BOX_AREA_RATIO or area_ratio > MAX_BOX_AREA_RATIO:
+        return False
+
+    aspect_ratio = box_w / box_h
+    if aspect_ratio < MIN_BOX_ASPECT_RATIO or aspect_ratio > MAX_BOX_ASPECT_RATIO:
+        return False
+    return True
+
+
+def _mask_iou(lhs_mask: np.ndarray, rhs_mask: np.ndarray) -> float:
+    if lhs_mask.shape != rhs_mask.shape:
+        return 0.0
+    lhs = lhs_mask > 0
+    rhs = rhs_mask > 0
+    union = np.logical_or(lhs, rhs).sum(dtype=np.int64)
+    if union <= 0:
+        return 0.0
+    intersection = np.logical_and(lhs, rhs).sum(dtype=np.int64)
+    return float(intersection) / float(union)
+
+
+def _apply_mask_nms(
+    candidates: list[tuple[InstancePrediction, np.ndarray, float]],
+) -> list[InstancePrediction]:
+    ordered = sorted(
+        candidates,
+        key=lambda item: (
+            item[0].mask_score or 0.0,
+            item[2],
+            item[0].bbox_mask_iou or 0.0,
+        ),
+        reverse=True,
+    )
+
+    selected_instances: list[InstancePrediction] = []
+    selected_masks: list[np.ndarray] = []
+    for instance, mask, _ in ordered:
+        is_duplicate = any(
+            _mask_iou(mask, selected_mask) >= MASK_NMS_IOU_THRESHOLD
+            for selected_mask in selected_masks
+        )
+        if is_duplicate:
+            continue
+        selected_instances.append(instance)
+        selected_masks.append(mask)
+    return selected_instances
+
+
+def _post_process_detections(image: Image.Image, detections: list[Detection]) -> list[Detection]:
+    prefiltered: list[Detection] = []
+    for item in detections:
+        if item.score < CONFIDENCE_THRESHOLD:
+            continue
+        clamped_bbox = _clamp_bbox(item.bbox, image.width, image.height)
+        if not _passes_box_sanity_checks(clamped_bbox, image.width, image.height):
+            continue
+        prefiltered.append(item.model_copy(update={"bbox": clamped_bbox}))
+
+    prefiltered.sort(key=lambda item: item.score, reverse=True)
+    return prefiltered
 
 
 async def run_predict(
@@ -169,6 +274,10 @@ async def run_predict(
     if not detections:
         return PredictResponse(objects=[], instances=[])
 
+    detections = _post_process_detections(image, detections)
+    if not detections:
+        return PredictResponse(objects=[], instances=[])
+
     bboxes = [item.bbox for item in detections]
     mask_files, metadata = await call_sam(
         file_bytes=file_bytes,
@@ -177,7 +286,7 @@ async def run_predict(
         bboxes=bboxes,
     )
 
-    instances: list[InstancePrediction] = []
+    candidates: list[tuple[InstancePrediction, np.ndarray, float]] = []
     for item in metadata.instances:
         if item.detection_index >= len(detections):
             continue
@@ -189,18 +298,31 @@ async def run_predict(
         mask = _load_binary_mask(mask_bytes)
         if mask is None:
             continue
+        if not _passes_cutout_size(mask):
+            continue
+        mask_score = item.mask_score
+        bbox_mask_iou = _mask_bbox_iou(mask, clamped_bbox)
+        if mask_score is None or bbox_mask_iou is None:
+            continue
+        if mask_score < MIN_MASK_SCORE or bbox_mask_iou < MIN_BBOX_MASK_IOU:
+            continue
         cutout_png_bytes = _build_cutout_png_bytes(image, mask)
         encoded_png_bytes = cutout_png_bytes or mask_bytes
-        instances.append(
-            InstancePrediction(
-                label=detection.label,
-                mask_score=item.mask_score,
-                bbox=clamped_bbox,
-                bbox_mask_iou=_mask_bbox_iou(mask, clamped_bbox),
-                png_base64=base64.b64encode(encoded_png_bytes).decode("ascii"),
+        candidates.append(
+            (
+                InstancePrediction(
+                    label=detection.label,
+                    mask_score=mask_score,
+                    bbox=clamped_bbox,
+                    bbox_mask_iou=bbox_mask_iou,
+                    png_base64=base64.b64encode(encoded_png_bytes).decode("ascii"),
+                ),
+                mask,
+                detection.score,
             )
         )
 
+    instances = _apply_mask_nms(candidates)
     objects = sorted({item.label for item in instances})
     logger.info(
         "Predict complete: objects=%d instances=%d",

@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import snapshot_download
-from transformers import AutoModelForCausalLM, AutoProcessor
+from transformers import AutoProcessor, Florence2ForConditionalGeneration
 
 
 logger = logging.getLogger(__name__)
@@ -23,9 +23,9 @@ def _preload_enabled() -> bool:
 
 
 MODELS_DIR = Path(_env_or_default("MODELS_DIR", "models"))
-FLORENCE_MODEL_ID = _env_or_default("FLORENCE_MODEL_ID", "microsoft/Florence-2-base-ft")
+FLORENCE_MODEL_ID = _env_or_default("FLORENCE_MODEL_ID", "florence-community/Florence-2-base")
 FLORENCE_MODEL_DIR = Path(
-    _env_or_default("FLORENCE_MODEL_DIR", str(MODELS_DIR / "florence-2-base-ft"))
+    _env_or_default("FLORENCE_MODEL_DIR", str(MODELS_DIR / "florence-2-base"))
 )
 
 _state_lock = threading.Lock()
@@ -44,7 +44,7 @@ def get_device() -> torch.device:
 class FlorenceResources:
     device: torch.device
     processor: AutoProcessor
-    model: AutoModelForCausalLM
+    model: Florence2ForConditionalGeneration
 
 
 def _ensure_model_downloaded(repo_id: str, local_dir: Path) -> str:
@@ -69,11 +69,10 @@ def load_resources() -> FlorenceResources:
 
         processor = AutoProcessor.from_pretrained(
             str(FLORENCE_MODEL_DIR),
-            trust_remote_code=True,
+            use_fast=True,
         )
-        model = AutoModelForCausalLM.from_pretrained(
+        model = Florence2ForConditionalGeneration.from_pretrained(
             str(FLORENCE_MODEL_DIR),
-            trust_remote_code=True,
             torch_dtype=torch_dtype,
             attn_implementation="eager",
         )

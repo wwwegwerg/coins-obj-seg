@@ -18,18 +18,42 @@ flowchart LR
   predictApi -->|"objects + instances"| client
 ```
 
-## Быстрый старт (Docker Compose)
+## W/out docker
 
-Требования:
+### Requirements
 
-- Docker + Docker Compose plugin.
-- Достаточно места на диске для моделей.
+- `Python 3.12`
+- `astral uv` (опционально, но оч удобно)
+- Установить зависимости (лежат внутри каждого сервиса)
 
-Запуск:
+### predict_api
 
 ```bash
-docker compose up --build
+cd services/predict_api/
+uv run uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+### florence_api
+
+```bash
+cd services/florence_api/
+uv run uvicorn main:app --host 0.0.0.0 --port 8001
+```
+
+### sam_api
+
+```bash
+cd services/sam_api/
+uv run uvicorn main:app --host 0.0.0.0 --port 8002
+```
+
+## Docker
+
+```bash
+docker compose up --build -d
+```
+
+## Проверка
 
 Сервисы и порты:
 
@@ -44,19 +68,3 @@ curl http://localhost:8000/health
 curl http://localhost:8001/health
 curl http://localhost:8002/health
 ```
-
-## Сервисы
-
-- [`services/florence_api/README.md`](services/florence_api/README.md) - детекция объектов (bbox).
-- [`services/sam_api/README.md`](services/sam_api/README.md) - сегментация по bbox и ZIP с масками.
-- [`services/predict_api/README.md`](services/predict_api/README.md) - оркестрация и агрегированный ответ.
-
-## Переменные окружения
-
-У каждого сервиса есть свой `.env` (и шаблон `.env.example`):
-
-- `services/florence_api/.env`
-- `services/sam_api/.env`
-- `services/predict_api/.env`
-
-При запуске через `docker-compose.yml` подключаются именно `.env` файлы сервисов.

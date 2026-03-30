@@ -1,7 +1,6 @@
 import io
 import json
 import logging
-import os
 import time
 import zipfile
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 
 from contracts import SegmentMetadata, SegmentMetadataItem
 from models import load_resources
+from settings import PRELOAD_MODELS
 from service import segment_with_sam
 
 
@@ -21,13 +21,9 @@ app = FastAPI(title="SAM Segmentation API")
 app.state.ready = False
 
 
-def _preload_enabled() -> bool:
-    return os.getenv("PRELOAD_MODELS", "true").strip().lower() in {"1", "true", "yes", "on"}
-
-
 @app.on_event("startup")
 async def preload_models() -> None:
-    if not _preload_enabled():
+    if not PRELOAD_MODELS:
         logger.info("PRELOAD_MODELS is disabled; readiness will stay false until first request.")
         logger.info("SAM startup finished at %s (UTC)", datetime.now(timezone.utc).isoformat())
         return

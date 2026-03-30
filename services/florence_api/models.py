@@ -1,32 +1,16 @@
 import logging
-import os
 import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 import torch
-from dotenv import load_dotenv
 from huggingface_hub import snapshot_download
 from transformers import AutoProcessor, Florence2ForConditionalGeneration
 
+from settings import FLORENCE_MODEL_DIR, FLORENCE_MODEL_ID, PRELOAD_MODELS
+
 
 logger = logging.getLogger(__name__)
-load_dotenv(dotenv_path=Path(__file__).with_name(".env"), override=False)
-
-def _env_or_default(name: str, default: str) -> str:
-    value = os.getenv(name, "").strip()
-    return value or default
-
-
-def _preload_enabled() -> bool:
-    return os.getenv("PRELOAD_MODELS", "true").strip().lower() in {"1", "true", "yes", "on"}
-
-
-MODELS_DIR = Path(_env_or_default("MODELS_DIR", "models"))
-FLORENCE_MODEL_ID = _env_or_default("FLORENCE_MODEL_ID", "florence-community/Florence-2-base")
-FLORENCE_MODEL_DIR = Path(
-    _env_or_default("FLORENCE_MODEL_DIR", str(MODELS_DIR / "florence-2-base"))
-)
 
 _state_lock = threading.Lock()
 _resources: "FlorenceResources | None" = None
@@ -85,7 +69,7 @@ def load_resources() -> FlorenceResources:
                 "Model infra: model_id=%s device=%s preload_models=%s model_source=%s gpu_name=%s gpu_count=%d compute_capability=%d.%d total_vram_mb=%d",
                 FLORENCE_MODEL_ID,
                 device.type,
-                _preload_enabled(),
+                PRELOAD_MODELS,
                 model_source,
                 props.name,
                 torch.cuda.device_count(),
@@ -98,7 +82,7 @@ def load_resources() -> FlorenceResources:
                 "Model infra: model_id=%s device=%s preload_models=%s model_source=%s",
                 FLORENCE_MODEL_ID,
                 device.type,
-                _preload_enabled(),
+                PRELOAD_MODELS,
                 model_source,
             )
 

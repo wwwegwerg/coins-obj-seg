@@ -50,7 +50,10 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8002
 ## Docker
 
 ```bash
-docker compose up --build -d
+docker compose build
+docker compose up
+# или конкретные сервисы
+docker compose up predict-api florence-api sam-api
 ```
 
 ## Проверка

@@ -6,13 +6,13 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
-from contracts import PredictResponse
-from settings import (
+from .constants import (
     FLORENCE_API_URL,
     PREDICT_READINESS_TIMEOUT_SECONDS,
     SAM_API_URL,
 )
-from service import run_predict
+from .contracts import PredictResponse
+from .service import run_predict
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -85,4 +85,3 @@ async def predict(file: UploadFile = File(...)) -> PredictResponse:
         elapsed_ms,
     )
     return result
-

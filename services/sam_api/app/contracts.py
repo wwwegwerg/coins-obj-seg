@@ -9,4 +9,3 @@ class SegmentMetadataItem(BaseModel):
 
 class SegmentMetadata(BaseModel):
     instances: list[SegmentMetadataItem]
-

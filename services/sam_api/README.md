@@ -1,6 +1,6 @@
 # sam_api
 
-## Endpoints [see main.py](./main.py)
+## Endpoints [see app/main.py](./app/main.py)
 
 - `GET /health` -> `{"status":"ok"}`.
 - `GET /ready` -> `{"status":"ready"}` если модель загружена, иначе `503`.
@@ -16,16 +16,17 @@
 
 ## Формат metadata.json
 
-[See contracts.py](./contracts.py).
+[See app/contracts.py](./app/contracts.py).
 
-## Environment
+## Configuration
 
-- `PRELOAD_MODELS` (default: `true`) - загружать модель на startup.
+- Базовые значения лежат в [app/constants.py](./app/constants.py).
+- При необходимости можно переопределить `SAM_MODEL_ID`, `SAM_MODEL_DIR`, `PRELOAD_MODELS` обычными переменными окружения.
 
 ## Run locally
 
 ```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8002
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8002
 ```
 
 Проверка:

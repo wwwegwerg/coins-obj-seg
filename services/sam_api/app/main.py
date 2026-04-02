@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 from PIL import Image
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 
-from contracts import SegmentMetadata, SegmentMetadataItem
-from models import load_resources
-from settings import PRELOAD_MODELS
-from service import segment_with_sam
+from .constants import PRELOAD_MODELS
+from .contracts import SegmentMetadata, SegmentMetadataItem
+from .models import load_resources
+from .service import segment_with_sam
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -126,4 +126,3 @@ async def segment(
         len(metadata_items),
     )
     return Response(content=zip_buffer.getvalue(), media_type="application/zip")
-

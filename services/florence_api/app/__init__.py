@@ -1,2 +1,1 @@
 """Florence detection microservice."""
-

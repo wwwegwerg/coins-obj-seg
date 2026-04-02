@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 from PIL import Image
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
-from contracts import DetectionResponse
-from models import load_resources
-from settings import PRELOAD_MODELS
-from service import detect_with_florence
+from .constants import PRELOAD_MODELS
+from .contracts import DetectionResponse
+from .models import load_resources
+from .service import detect_with_florence
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -83,4 +83,3 @@ async def detect(file: UploadFile = File(...)) -> DetectionResponse:
         len(detections),
     )
     return DetectionResponse(detections=detections)
-

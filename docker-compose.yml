@@ -7,9 +7,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./services/florence_api/models:/app/models
-    env_file:
-      - ./services/florence_api/.env
+      - ./services/florence_api/app/models:/app/app/models
 
   sam-api:
     build:
@@ -19,9 +17,7 @@ services:
     ports:
       - "8002:8000"
     volumes:
-      - ./services/sam_api/models:/app/models
-    env_file:
-      - ./services/sam_api/.env
+      - ./services/sam_api/app/models:/app/app/models
 
   predict-api:
     build:
@@ -30,8 +26,6 @@ services:
     container_name: predict-api
     ports:
       - "8000:8000"
-    env_file:
-      - ./services/predict_api/.env
     environment:
       FLORENCE_API_URL: ${FLORENCE_API_URL:-http://florence-api:8000}
       SAM_API_URL: ${SAM_API_URL:-http://sam-api:8000}

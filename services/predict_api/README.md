@@ -1,25 +1,23 @@
 # predict_api
 
-## Endpoints [see main.py](./main.py)
+## Endpoints [see app/main.py](./app/main.py)
 
 - `GET /health` -> `{"status":"ok"}`.
 - `GET /ready` -> проверяет доступность downstream-сервисов (`/health` у Florence и SAM), иначе `503`.
 - `POST /predict` -> JSON с объектами и инстансами:
   - Request: `multipart/form-data`, поле `file` (изображение).
-  - Response: [see contracts.py](./contracts.py).
+  - Response: [see app/contracts.py](./app/contracts.py).
   - Ошибки: `400` (невалидный файл), `500` (ошибка оркестрации/вызова downstream).
 
-## Environment
+## Configuration
 
-- `FLORENCE_API_URL` (required), например `http://florence-api:8000`
-- `SAM_API_URL` (required), например `http://sam-api:8000`
-- `PREDICT_HTTP_TIMEOUT_SECONDS` (default: `300`)
-- `PREDICT_READINESS_TIMEOUT_SECONDS` (default: `3`)
+- Базовые значения лежат в [app/constants.py](./app/constants.py).
+- При необходимости можно переопределить `FLORENCE_API_URL`, `SAM_API_URL`, `PREDICT_HTTP_TIMEOUT_SECONDS`, `PREDICT_READINESS_TIMEOUT_SECONDS` обычными переменными окружения.
 
 ## Run locally
 
 ```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Проверка:

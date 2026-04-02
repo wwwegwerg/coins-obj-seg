@@ -32,4 +32,3 @@ class InstancePrediction(BaseModel):
 class PredictResponse(BaseModel):
     objects: list[str]
     instances: list[InstancePrediction]
-

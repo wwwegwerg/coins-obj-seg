@@ -1,24 +1,25 @@
 # florence_api
 
-## Endpoints [see main.py](./main.py)
+## Endpoints [see app/main.py](./app/main.py)
 
 - `GET /health` -> `{"status":"ok"}`.
 - `GET /ready` -> `{"status":"ready"}` если модель загружена, иначе `503`.
 - `POST /detect` -> JSON с детекциями:
   - Request: `multipart/form-data`, поле `file` (изображение).
-  - Response: [see contracts.py](./contracts.py).
+  - Response: [see app/contracts.py](./app/contracts.py).
   - Ошибки: `400` (не изображение / пустой файл / decode), `500` (ошибка инференса).
 
 `florence_api` не выполняет геометрическую нормализацию bbox. Нормализация и дополнительная постобработка выполняются в `predict_api`.
 
-## Environment
+## Configuration
 
-- `PRELOAD_MODELS` (default: `true`) - загружать модель на startup.
+- Базовые значения лежат в [app/constants.py](./app/constants.py).
+- При необходимости можно переопределить `FLORENCE_MODEL_ID`, `FLORENCE_MODEL_DIR`, `PRELOAD_MODELS` обычными переменными окружения.
 
 ## Run locally
 
 ```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8001
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 Проверка:

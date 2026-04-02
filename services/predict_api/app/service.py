@@ -9,17 +9,17 @@ import httpx
 import numpy as np
 from PIL import Image
 
-from contracts import (
+from .constants import (
+    FLORENCE_API_URL,
+    PREDICT_HTTP_TIMEOUT_SECONDS,
+    SAM_API_URL,
+)
+from .contracts import (
     Detection,
     DetectionResponse,
     InstancePrediction,
     PredictResponse,
     SegmentMetadata,
-)
-from settings import (
-    FLORENCE_API_URL,
-    PREDICT_HTTP_TIMEOUT_SECONDS,
-    SAM_API_URL,
 )
 
 
@@ -330,4 +330,3 @@ async def run_predict(
         len(instances),
     )
     return PredictResponse(objects=objects, instances=instances)
-

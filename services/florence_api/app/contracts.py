@@ -9,4 +9,3 @@ class Detection(BaseModel):
 
 class DetectionResponse(BaseModel):
     detections: list[Detection]
-

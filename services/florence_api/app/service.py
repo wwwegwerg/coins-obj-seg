@@ -4,8 +4,8 @@ import re
 import torch
 from PIL import Image
 
-from contracts import Detection
-from models import FlorenceResources
+from .contracts import Detection
+from .models import FlorenceResources
 
 
 def _find_matched_token_indices(

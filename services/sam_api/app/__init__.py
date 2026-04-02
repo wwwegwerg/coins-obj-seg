@@ -1,2 +1,1 @@
 """SAM segmentation microservice."""
-

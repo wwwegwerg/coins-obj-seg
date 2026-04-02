@@ -30,21 +30,21 @@ flowchart LR
 
 ```bash
 cd services/predict_api/
-uv run uvicorn main:app --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### florence_api
 
 ```bash
 cd services/florence_api/
-uv run uvicorn main:app --host 0.0.0.0 --port 8001
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 ### sam_api
 
 ```bash
 cd services/sam_api/
-uv run uvicorn main:app --host 0.0.0.0 --port 8002
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8002
 ```
 
 ## Docker

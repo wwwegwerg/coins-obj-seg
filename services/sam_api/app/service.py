@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from models import SamResources
+from .models import SamResources
 
 
 @dataclass

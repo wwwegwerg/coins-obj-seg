@@ -8,6 +8,7 @@ services:
       - "8001:8000"
     volumes:
       - ./services/florence_api/app/models:/app/app/models
+    restart: unless-stopped
 
   sam-api:
     build:
@@ -18,6 +19,7 @@ services:
       - "8002:8000"
     volumes:
       - ./services/sam_api/app/models:/app/app/models
+    restart: unless-stopped
 
   predict-api:
     build:
@@ -32,3 +34,4 @@ services:
     depends_on:
       - florence-api
       - sam-api
+    restart: unless-stopped

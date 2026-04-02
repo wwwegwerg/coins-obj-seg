@@ -10,8 +10,8 @@ def _get_bool(name: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-SAM_MODEL_ID = os.getenv("SAM_MODEL_ID", "facebook/sam2.1-hiera-tiny").strip()
+SAM_MODEL_ID = os.getenv("SAM_MODEL_ID", "facebook/sam2.1-hiera-large").strip()
 SAM_MODEL_DIR = Path(
-    os.getenv("SAM_MODEL_DIR", str(APP_DIR / "models" / "sam2.1-hiera-tiny")).strip()
+    os.getenv("SAM_MODEL_DIR", str(APP_DIR / "models" / "sam2.1-hiera-large")).strip()
 )
 PRELOAD_MODELS = _get_bool("PRELOAD_MODELS", True)

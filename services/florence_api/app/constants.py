@@ -10,8 +10,8 @@ def _get_bool(name: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-FLORENCE_MODEL_ID = os.getenv("FLORENCE_MODEL_ID", "florence-community/Florence-2-base").strip()
+FLORENCE_MODEL_ID = os.getenv("FLORENCE_MODEL_ID", "florence-community/Florence-2-large-ft").strip()
 FLORENCE_MODEL_DIR = Path(
-    os.getenv("FLORENCE_MODEL_DIR", str(APP_DIR / "models" / "florence-2-base")).strip()
+    os.getenv("FLORENCE_MODEL_DIR", str(APP_DIR / "models" / "florence-2-large-ft")).strip()
 )
 PRELOAD_MODELS = _get_bool("PRELOAD_MODELS", True)

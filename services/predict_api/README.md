@@ -43,7 +43,7 @@ curl -X POST "http://localhost:8000/predict" \
   "instances": [
     {
       "label": "coin",
-      "mask_score": 0.93,
+      "confidence_score": 0.93,
       "bbox": [123.4, 56.7, 220.1, 160.9],
       "bbox_mask_iou": 0.88,
       "png_base64": "iVBORw0KGgoAAAANSUhEUgAA..."

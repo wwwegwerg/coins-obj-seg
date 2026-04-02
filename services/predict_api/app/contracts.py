@@ -23,7 +23,7 @@ class SegmentMetadata(BaseModel):
 
 class InstancePrediction(BaseModel):
     label: str
-    mask_score: float | None = None
+    confidence_score: float
     bbox: list[float] = Field(min_length=4, max_length=4)
     bbox_mask_iou: float | None = None
     png_base64: str

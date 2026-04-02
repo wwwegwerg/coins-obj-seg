@@ -5,7 +5,7 @@ import time
 import zipfile
 from datetime import datetime, timezone
 
-from PIL import Image
+from PIL import Image, ImageOps
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 
 from .constants import PRELOAD_MODELS
@@ -69,7 +69,7 @@ async def segment(
         raise HTTPException(status_code=400, detail="`bboxes` must be a list.")
 
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     except Exception as exc:  # pragma: no cover - input parsing guard
         raise HTTPException(status_code=400, detail="Failed to decode image.") from exc
 

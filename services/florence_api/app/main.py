@@ -3,7 +3,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from PIL import Image
+from PIL import Image, ImageOps
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from .constants import PRELOAD_MODELS
@@ -56,7 +56,7 @@ async def detect(file: UploadFile = File(...)) -> DetectionResponse:
         raise HTTPException(status_code=400, detail="Uploaded image is empty.")
 
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     except Exception as exc:  # pragma: no cover - input parsing guard
         raise HTTPException(status_code=400, detail="Failed to decode image.") from exc
 

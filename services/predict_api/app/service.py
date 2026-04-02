@@ -7,7 +7,7 @@ from typing import Iterable
 
 import httpx
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 from .constants import (
     FLORENCE_API_URL,
@@ -262,7 +262,7 @@ async def run_predict(
     content_type: str,
 ) -> PredictResponse:
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     except Exception as exc:
         raise RuntimeError(f"Failed to decode image in predict service: {exc}") from exc
 
